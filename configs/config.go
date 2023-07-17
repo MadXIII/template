@@ -1,18 +1,21 @@
 package configs
 
 import (
-	"encoding/json"
-	"io"
-	"os"
+	"github.com/spf13/viper"
 )
 
 type Configs struct {
 	Server Server
-	PSQL   PSQL
+	Store  Store
 }
 
 type Server struct {
 	Address string `json:"address"`
+}
+
+type Store struct {
+	DB  PSQL
+	RDB Redis
 }
 
 type PSQL struct {
@@ -28,20 +31,27 @@ type Redis struct {
 }
 
 func New() (Configs, error) {
-	file, err := os.Open("./configs/config.json")
-	if err != nil {
-		return Configs{}, err
-	}
+	viper.AddConfigPath("./configs")
+	viper.SetConfigName("config")
+	viper.SetConfigType("json")
+	viper.ReadInConfig()
 
-	bb, err := io.ReadAll(file)
-	if err != nil {
-		return Configs{}, err
-	}
-
-	var cfg Configs
-
-	if err := json.Unmarshal(bb, &cfg); err != nil {
-		return Configs{}, err
+	cfg := Configs{
+		Server: Server{
+			Address: viper.GetString("server.address"),
+		},
+		Store: Store{
+			DB: PSQL{
+				Host:     viper.GetString("psql.localhost"),
+				Port:     viper.GetString("psql.port"),
+				Username: viper.GetString("psql.username"),
+				Name:     viper.GetString("psql.dbname"),
+				SSL:      viper.GetString("psql.sslmode"),
+			},
+			RDB: Redis{
+				Address: viper.GetString("redis.address"),
+			},
+		},
 	}
 
 	return cfg, nil
